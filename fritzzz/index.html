@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Attendance Monitoring System</title>
+    <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="%23fff" stroke="%23764ba2" stroke-width="4"/><circle cx="22" cy="26" r="4" fill="%23000"/><circle cx="42" cy="26" r="4" fill="%23000"/><circle cx="32" cy="34" r="6" fill="%23e63946"/><path d="M20 44c4 4 20 4 24 0" stroke="%23000" stroke-width="3" fill="none" stroke-linecap="round"/></svg>'>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand">
+                <div class="logo" aria-hidden="true">
+                    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="30" fill="#ffffff" stroke="#764ba2" stroke-width="4"/>
+                        <circle cx="22" cy="26" r="4" fill="#000000"/>
+                        <circle cx="42" cy="26" r="4" fill="#000000"/>
+                        <circle cx="32" cy="34" r="6" fill="#e63946"/>
+                        <path d="M20 44c4 4 20 4 24 0" stroke="#000000" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <h1>📚 Student Attendance Monitoring System</h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="showAddStudentModal()">+ Add Student</button>
+                <button class="btn btn-secondary" onclick="showScanModal()">📷 Scan QR Code</button>
+            </div>
+        </header>
+
+        <div class="global-search-container">
+            <input type="text" id="globalSearch" placeholder="🔍 Search across all tabs (students, attendance, reports)..." class="global-search-input" onkeyup="performGlobalSearch()" onfocus="showSearchSuggestions()">
+            <div id="searchSuggestions" class="search-suggestions"></div>
+        </div>
+
+        <nav class="tabs">
+            <button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
+            <button class="tab" onclick="showTab('students')">Students</button>
+            <button class="tab" onclick="showTab('attendance')">Attendance</button>
+            <button class="tab" onclick="showTab('reports')">Reports</button>
+            <button class="tab" id="searchResultsTab" onclick="showTab('searchResults')" style="display: none;">Search Results</button>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Students</h3>
+                    <p class="stat-number" id="totalStudents">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Present Today</h3>
+                    <p class="stat-number" id="presentToday">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Absent Today</h3>
+                    <p class="stat-number" id="absentToday">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Attendance Rate</h3>
+                    <p class="stat-number" id="attendanceRate">0%</p>
+                </div>
+            </div>
+            <div class="recent-attendance">
+                <h2>Recent Attendance</h2>
+                <div id="recentAttendanceList" class="attendance-list"></div>
+            </div>
+        </div>
+
+        <!-- Students Tab -->
+        <div id="students" class="tab-content">
+            <div class="students-header">
+                <input type="text" id="searchStudents" placeholder="Search students..." class="search-input" onkeyup="filterStudents()">
+            </div>
+            <div id="studentsList" class="students-grid"></div>
+        </div>
+
+        <!-- Attendance Tab -->
+        <div id="attendance" class="tab-content">
+            <div class="attendance-header">
+                <input type="date" id="attendanceDate" class="date-input" onchange="loadAttendanceByDate()">
+                <button class="btn btn-secondary" onclick="exportAttendance()">📥 Export CSV</button>
+            </div>
+            <div id="attendanceList" class="attendance-table"></div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content">
+            <div class="reports-header">
+                <select id="reportPeriod" class="select-input" onchange="generateReport()">
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="all">All Time</option>
+                </select>
+                <button class="btn btn-secondary" onclick="exportReport()">📥 Export Report</button>
+            </div>
+            <div id="reportContent" class="report-content"></div>
+        </div>
+
+        <!-- Search Results Tab -->
+        <div id="searchResults" class="tab-content">
+            <div class="search-results-header">
+                <h2 id="searchResultsTitle">Search Results</h2>
+                <button class="btn btn-secondary" onclick="clearGlobalSearch()">Clear Search</button>
+            </div>
+            <div id="searchResultsContent" class="search-results-content">
+                <p style="text-align: center; color: #6c757d; padding: 40px;">Enter a search term to find students, attendance records, and reports.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="addStudentModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addStudentModal')">&times;</span>
+            <h2>Add New Student</h2>
+            <form id="addStudentForm" onsubmit="addStudent(event)">
+                <div class="form-group">
+                    <label for="studentName">Student Name</label>
+                    <input type="text" id="studentName" required>
+                </div>
+                <div class="form-group">
+                    <label for="studentId">Student ID</label>
+                    <input type="text" id="studentId" required>
+                </div>
+                <div class="form-group">
+                    <label for="studentEmail">Email (Optional)</label>
+                    <input type="email" id="studentEmail">
+                </div>
+                <div class="form-group">
+                    <label for="studentClass">Class/Subject</label>
+                    <input type="text" id="studentClass" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Student</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- QR Code Scanner Modal -->
+    <div id="scanModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close" onclick="closeScanModal()">&times;</span>
+            <h2>Scan QR Code</h2>
+            <div class="scanner-container">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas" style="display: none;"></canvas>
+            </div>
+            <div id="scanResult" class="scan-result"></div>
+            <button class="btn btn-secondary" onclick="stopScanning()">Stop Scanning</button>
+        </div>
+    </div>
+
+    <!-- QR Code Display Modal -->
+    <div id="qrModal" class="modal">
+        <div class="modal-content modal-small">
+            <span class="close" onclick="closeModal('qrModal')">&times;</span>
+            <h2>Student QR Code</h2>
+            <div id="qrCodeDisplay" class="qr-display"></div>
+            <button class="btn btn-secondary" onclick="printQRCode()">🖨️ Print QR Code</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
+
